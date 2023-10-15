@@ -25,17 +25,26 @@ class A_star:
         self.generate_grid() 
     
     def generate_grid(self): 
-        num_rows = int((self.y_range[1]-self.y_range[0])/self.cell_size)
-        num_cols = int((self.x_range[1]-self.x_range[0])/self.cell_size)
+        num_rows = int((self.y_range[1] - self.y_range[0]) / self.cell_size)
+        num_cols = int((self.x_range[1] - self.x_range[0]) / self.cell_size)
         self.grid = np.zeros((num_rows,num_cols))
+        self.populate_landmarks() 
     
     def populate_landmarks(self): 
         landmark_data = read_dat_file('ds1/ds1_Landmark_Groundtruth.dat')
-        landmarks_x, landmarks_y = landmark_data[:,1], landmark_data[:,2] 
+        landmarks_x, landmarks_y = landmark_data[:,1], landmark_data[:,2] #obtain world positions for landmarks, need to discretize to grid locations
 
         for l_x, l_y in zip(landmarks_x, landmarks_y): 
-            pass
+            l_idx, l_idy = self.position_to_index(l_x,l_y)
+            self.grid[l_idy,l_idx] = 1 #[row,col]
 
+
+    #converts between continuous position to grid index
+    def position_to_index(self,pos_x,pos_y): 
+        #1) subtract position from minimum range (to find relative distance from beginning) 
+        #2) divide by cell size 
+        idx_x, idx_y = int((pos_x - self.x_range[0]) / self.cell_size) , int((pos_y - self.y_range[0]) / self.cell_size)
+        return idx_x, idx_y
 
     def display_grid(self): 
         print(self.grid) 
@@ -44,8 +53,8 @@ class A_star:
 
 def main(): 
     test = A_star(1,(-2,5),(-6,6),1) 
-    # test.display_grid()
-    test.populate_landmarks() 
+    test.display_grid()
+  
 
 if __name__=='__main__': 
     main() 
