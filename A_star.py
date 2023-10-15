@@ -16,7 +16,6 @@ def read_dat_file(file_path):
 
 class A_star: 
     def __init__(self, m, x_range, y_range, cell_size): 
-
         self.m = m 
         self.x_range = x_range 
         self.y_range = y_range
@@ -38,6 +37,9 @@ class A_star:
             l_idx, l_idy = self.position_to_index(l_x,l_y)
             self.grid[l_idy,l_idx] = 1 #[row,col]
 
+    def plan_path(self, start, goal): 
+        #plan path from start to goal
+        pass 
 
     #converts between continuous position to grid index
     def position_to_index(self,pos_x,pos_y): 
@@ -50,11 +52,10 @@ class A_star:
         print(self.grid) 
 
 
-
 def main(): 
     test = A_star(1,(-2,5),(-6,6),1) 
     test.display_grid()
-  
+
 
 if __name__=='__main__': 
     main() 
