@@ -53,17 +53,50 @@ class A_star:
     
     def plan_path(self, start, goal): 
         #plan path from start to goal
-        start = Node(self.position_to_index(*start))
-        goal = Node(self.position_to_index(*goal))
+        start_node = Node(self.position_to_index(*start))
+        goal_node = Node(self.position_to_index(*goal))
 
-        open_set = [start] 
-       
+        frontier = [start_node] #nodes to explore
+        visited = [] 
         
+        while frontier: 
+            cur_node = min(frontier, key=lambda x:x.f) #select node from neighbors with lowest total cost, f
+
+            visited.append(cur_node) 
+            frontier.remove(cur_node) 
+
+            if cur_node == goal_node: 
+                path = [] 
+                while cur_node: 
+                    path.append(cur_node.position) 
+                    cur_node = cur_node.parent 
+                return path[::-1]
+            
+            neighbors = self.get_neighbors(cur_node) 
+
+            for neigh,cost in neighbors: 
+                neigh.g = cur_node.g + cost 
+                neigh.h = self.manhattan_heuristic(neigh.position,goal_node.position)
+                neigh.f = neigh.g + neigh.h 
+
+                if neigh not in visited and neigh not in frontier: 
+                    neigh.parent = cur_node 
+                    frontier.append(neigh) #want to explore neighbors of neigh 
+
+                elif neigh in frontier: #this node was reachable from another node. we want the shorter cost one to it
+                    prev_found_neigh = frontier[frontier.index(neigh)] #find idx of neigh 
+                    if neigh.g < prev_found_neigh.g:
+                        prev_found_neigh.g = neigh.g
+                        prev_found_neigh.f = prev_found_neigh.g + prev_found_neigh.h
+                        prev_found_neigh.parent = cur_node
+
+        return None
+
     #manhattan distance 
-    def heuristic(self,start,goal): 
-        return np.abs(goal[0]-start[0]) + np.abs(goal[1]-start[0])
+    def manhattan_heuristic(self,start,goal): 
+        return np.abs(goal[0]-start[0]) + np.abs(goal[1]-start[1])
+
     
-    #
     def get_neighbors(self,node): 
         neighbors = []
         pos_x, pos_y = node.position 
@@ -99,7 +132,9 @@ class A_star:
 def main(): 
     test = A_star(1,(-2,5),(-6,6),1) 
     test.display_grid()
-    test.plan_path((0.5,-1.5),(5,5)) 
+    path = test.plan_path(start=(4.5,3.5),goal=(4.5,-1.5))   
+
+    print(path)
 
 
 if __name__=='__main__': 
