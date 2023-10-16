@@ -100,7 +100,6 @@ class A_star:
     def get_neighbors(self,node): 
         neighbors = []
         pos_x, pos_y = node.position 
-
         for dx in [-1,0,1]: 
             for dy in [-1,0,1]: 
                 new_x, new_y = pos_x+dx, pos_y+dy 
@@ -127,12 +126,33 @@ class A_star:
 
     def display_grid(self): 
         print(self.grid) 
+    
+    def visualize_results(self, path):
+        plt.figure(figsize=(5,10))
+        plt.grid(color='black', linewidth=0.5)
+
+        plt.xticks(np.arange(-0.5, self.grid.shape[1], 1), [])
+        plt.yticks(np.arange(-0.5, self.grid.shape[0], 1), [])
+
+        plt.imshow(self.grid, cmap='gray_r')
+
+        if path:
+            path_x, path_y = zip(*path) 
+            plt.plot(path_x, path_y, 'ro-', markersize=5)
+
+        plt.title("A* Pathfinding Results")
+        plt.show()
 
 
 def main(): 
     test = A_star(1,(-2,5),(-6,6),1) 
     test.display_grid()
+    path = test.plan_path(start=(0.5,-1.5),goal=(.5,1.5))   
+    test.visualize_results(path)
     path = test.plan_path(start=(4.5,3.5),goal=(4.5,-1.5))   
+    test.visualize_results(path)
+    path = test.plan_path(start=(-0.5,5.5),goal=(1.5,3.5))   
+    test.visualize_results(path)
 
     print(path)
 
