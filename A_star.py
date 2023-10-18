@@ -51,6 +51,10 @@ class A_star:
 
     #TODO: ADD ERROR CHECKING FOR VALID START,GOAL
     
+
+    #frontier: nodes that have been visited but not expanded (their successors havent been explored) 
+    #visited: nodes that have been visited and expanded
+
     def plan_path(self, start, goal): 
         #plan path from start to goal
         start_node = Node(self.position_to_index(*start))
@@ -65,7 +69,7 @@ class A_star:
             visited.append(cur_node) 
             frontier.remove(cur_node) 
 
-            if cur_node == goal_node: 
+            if cur_node == goal_node: #if found goal node, find the path and return 
                 path = [] 
                 while cur_node: 
                     path.append(cur_node.position) 
@@ -74,18 +78,20 @@ class A_star:
             
             neighbors = self.get_neighbors(cur_node) 
 
-            for neigh,cost in neighbors: 
+            for neigh,cost in neighbors:  #evaluate the cost for all the neighbors
                 neigh.g = cur_node.g + cost 
                 neigh.h = self.manhattan_heuristic(neigh.position,goal_node.position)
                 neigh.f = neigh.g + neigh.h 
 
-                if neigh not in visited and neigh not in frontier: 
+                if neigh not in visited and neigh not in frontier: #if this is a new node, add it to list to be expanded
                     neigh.parent = cur_node 
-                    frontier.append(neigh) #want to explore neighbors of neigh 
+                    frontier.append(neigh) 
 
-                elif neigh in frontier: #this node was reachable from another node. we want the shorter cost one to it
-                    prev_found_neigh = frontier[frontier.index(neigh)] #find idx of neigh 
-                    if neigh.g < prev_found_neigh.g:
+                #check if another node in the frontier has the same position as this neighbor
+                elif neigh in frontier: #this node was already visited, but not expanded. we want the shorter cost path to it.
+                    prev_found_neigh = frontier[frontier.index(neigh)]
+                
+                    if neigh.g < prev_found_neigh.g: #comparing cost of reaching this spot from two diff paths
                         prev_found_neigh.g = neigh.g
                         prev_found_neigh.f = prev_found_neigh.g + prev_found_neigh.h
                         prev_found_neigh.parent = cur_node
@@ -96,6 +102,12 @@ class A_star:
     def manhattan_heuristic(self,start,goal): 
         return np.abs(goal[0]-start[0]) + np.abs(goal[1]-start[1])
 
+
+    #softly declare all the landmark positions for the grid
+    #the robot moves as if there is no landmarks
+    #if one of the robot's generated neighbors is a landmark position, 
+        # turn it from gray->black on the grid
+        # "observe" the landmark by setting its cost to 1000 and proceed
     
     def get_neighbors(self,node): 
         neighbors = []
@@ -137,7 +149,8 @@ class A_star:
         plt.imshow(self.grid, cmap='gray_r')
 
         if path:
-            path_x, path_y = zip(*path) 
+            print("AJSDA",path)
+            path_x, path_y = zip(*path) #unpacks path and 
             plt.plot(path_x, path_y, 'ro-', markersize=5)
 
         plt.title("A* Pathfinding Results")
