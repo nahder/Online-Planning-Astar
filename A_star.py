@@ -28,8 +28,7 @@ class Node:
 
 
 class A_star: 
-    def __init__(self, m, x_range, y_range, cell_size): 
-        self.m = m 
+    def __init__(self,x_range, y_range, cell_size): 
         self.x_range = x_range 
         self.y_range = y_range
         self.cell_size = cell_size 
@@ -38,7 +37,7 @@ class A_star:
     def generate_grid(self): 
         num_rows = int((self.y_range[1] - self.y_range[0]) / self.cell_size)
         num_cols = int((self.x_range[1] - self.x_range[0]) / self.cell_size)
-        self.grid = np.zeros((num_rows,num_cols))
+        self.grid = np.zeros((num_rows,num_cols)) #grid values are 0(their cost)
         self.populate_landmarks() 
     
     def populate_landmarks(self): 
@@ -47,7 +46,8 @@ class A_star:
 
         for l_x, l_y in zip(landmarks_x, landmarks_y): 
             l_idx, l_idy = self.position_to_index(l_x,l_y)
-            self.grid[l_idy,l_idx] = 1 #[row,col]
+            self.grid[l_idy,l_idx] = 1000 #[row,col] grid values are 1000 (their cost)
+            
 
     #TODO: ADD ERROR CHECKING FOR VALID START,GOAL
     
@@ -78,8 +78,9 @@ class A_star:
             
             neighbors = self.get_neighbors(cur_node) 
 
-            for neigh,cost in neighbors:  #evaluate the cost for all the neighbors
-                neigh.g = cur_node.g + cost 
+            for neigh in neighbors:  #evaluate the cost for all the neighbors
+                print(neighbors)
+                neigh.g = cur_node.g  + self.grid[neigh.position[1],neigh.position[0]]
                 neigh.h = self.manhattan_heuristic(neigh.position,goal_node.position)
                 neigh.f = neigh.g + neigh.h 
 
@@ -114,14 +115,9 @@ class A_star:
         pos_x, pos_y = node.position 
         for dx in [-1,0,1]: 
             for dy in [-1,0,1]: 
-                new_x, new_y = pos_x+dx, pos_y+dy 
-
-                if self.within_grid(new_x,new_y) and (dx,dy) != (0,0): 
-                    if self.grid[new_y,new_x] == 1: #if wall there cost is 1k
-                        cost = 1000
-                    else: 
-                        cost = 1
-                    neighbors.append((Node(position=(new_x,new_y)),cost)) #returns neighbor and movement cost to that node 
+                neigh_x, neigh_y = pos_x+dx, pos_y+dy 
+                if self.within_grid(neigh_x,neigh_y) and (dx,dy) != (0,0): 
+                    neighbors.append(Node(position=(neigh_x,neigh_y))) #returns neighbor and movement cost to that node 
         return neighbors 
 
 
@@ -137,7 +133,8 @@ class A_star:
         return idx_x, idx_y
 
     def display_grid(self): 
-        print(self.grid) 
+        # print(self.grid) 
+        pass
     
     def visualize_results(self, path):
         plt.figure(figsize=(5,10))
@@ -149,7 +146,7 @@ class A_star:
         plt.imshow(self.grid, cmap='gray_r')
 
         if path:
-            print("AJSDA",path)
+            # print("AJSDA",path)
             path_x, path_y = zip(*path) #unpacks path and 
             plt.plot(path_x, path_y, 'ro-', markersize=5)
 
@@ -158,7 +155,9 @@ class A_star:
 
 
 def main(): 
-    test = A_star(1,(-2,5),(-6,6),1) 
+    # def __init__(self, m, x_range, y_range, cell_size): 
+
+    test = A_star(x_range=(-2,5),y_range=(-6,6),cell_size=1) 
     test.display_grid()
     path = test.plan_path(start=(0.5,-1.5),goal=(.5,1.5))   
     test.visualize_results(path)
@@ -167,7 +166,7 @@ def main():
     path = test.plan_path(start=(-0.5,5.5),goal=(1.5,3.5))   
     test.visualize_results(path)
 
-    print(path)
+    # print(path)
 
 
 if __name__=='__main__': 
