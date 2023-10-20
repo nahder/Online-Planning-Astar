@@ -25,6 +25,9 @@ class Node:
     def __eq__(self, other_node): #equals method to compare if nodes are at same pos
         return self.position == other_node.position
 
+    def __hash__(self): #makes it hashable for set
+        return hash(self.position)
+
 class A_star: 
     def __init__(self, m, x_range, y_range, cell_size): 
         self.m = m 
@@ -58,53 +61,52 @@ class A_star:
         start_node = Node(self.position_to_index(*start))
         goal_node = Node(self.position_to_index(*goal))
 
-        frontier = [start_node] #nodes to explore
-        visited = [] 
+        frontier = {start_node} 
+        node_dict = {start_node.position: start_node}  # dictionary for O(1) node lookup by position
+        visited = set() #set for o(1) lookup to see if it exists
         
         while frontier: 
             cur_node = min(frontier, key=lambda x:x.f)
-
-            visited.append(cur_node) 
-            frontier.remove(cur_node) 
-
             if cur_node == goal_node: 
                 path = [] 
                 while cur_node: 
                     path.append(cur_node.position) 
                     cur_node = cur_node.parent 
                 return path[::-1]
-            
-            neighbors = self.get_neighbors(cur_node) 
 
-            for neigh,cost in neighbors: 
+            visited.add(cur_node) 
+            frontier.remove(cur_node)
+
+            neighbors = self.get_neighbors(cur_node) 
+            for neigh, cost in neighbors: 
                 neigh.g = cur_node.g + cost 
                 neigh.h = self.manhattan_heuristic(neigh.position,goal_node.position)
-                neigh.fl = neigh.g + neigh.h 
+                neigh.f = neigh.g + neigh.h 
 
-                if neigh not in visited and neigh not in frontier: 
-                    neigh.parent = cur_node 
-                    frontier.append(neigh) 
+                if neigh not in visited:
+                    if neigh not in frontier:
+                        neigh.parent = cur_node 
+                        frontier.add(neigh)
+                        node_dict[neigh.position] = neigh
+                    else:
+                        existing_neigh = node_dict[neigh.position]
+                        if neigh.g < existing_neigh.g:
+                            existing_neigh.g = neigh.g
+                            existing_neigh.f = existing_neigh.g + existing_neigh.h
+                            existing_neigh.parent = cur_node
 
-                elif neigh in frontier:
-                    prev_found_neigh = frontier[frontier.index(neigh)] 
-                    if neigh.g < prev_found_neigh.g:
-                        prev_found_neigh.g = neigh.g
-                        prev_found_neigh.f = prev_found_neigh.g + prev_found_neigh.h
-                        prev_found_neigh.parent = cur_node
-
-        return None
 
     def online_plan_path(self, start, goal):
         start_node = Node(self.position_to_index(*start))
         goal_node = Node(self.position_to_index(*goal))
 
-        frontier = [start_node]
-        visited = []
+        frontier = {start_node}
+        visited = set()
         path = []
 
         while frontier:
             cur_node = min(frontier, key=lambda x: x.f)
-            visited.append(cur_node.position)
+            visited.add(cur_node.position)
             path.append(cur_node.position)
             frontier.remove(cur_node)
 
@@ -112,7 +114,6 @@ class A_star:
                 return path
 
             neighbors = self.get_neighbors(cur_node)
-
             best_neighbor = None
             lowest_f = float('inf')
             
@@ -126,7 +127,7 @@ class A_star:
                         best_neighbor = neigh
                         
             if best_neighbor: 
-                frontier.append(best_neighbor)
+                frontier.add(best_neighbor)
 
         return None
 
@@ -173,7 +174,7 @@ class A_star:
 
         if path:
             path_x, path_y = zip(*path) 
-            plt.plot(path_x, path_y, 'ro-', markersize=5)
+            plt.plot(path_x, path_y, 'ro-', markersize=1)
 
         plt.title("A* Pathfinding Results")
         plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)  #remove padding
