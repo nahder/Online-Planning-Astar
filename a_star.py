@@ -1,6 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 
+#reads in .dat file into a np array
 def read_dat_file(file_path):
     data = []
     with open(file_path, 'r') as file:
@@ -36,12 +37,14 @@ class A_star:
         self.cell_size = cell_size 
         self.generate_grid() 
     
+    #creates grid based on provided x and y ranges
     def generate_grid(self): 
         num_rows = int((self.y_range[1] - self.y_range[0]) / self.cell_size)
         num_cols = int((self.x_range[1] - self.x_range[0]) / self.cell_size)
         self.grid = np.zeros((num_rows,num_cols))
         self.populate_landmarks() 
     
+    #fills in landmarks and scales them based on cell size
     def populate_landmarks(self): 
         landmark_data = read_dat_file('ds1/ds1_Landmark_Groundtruth.dat')
         landmarks_x, landmarks_y = landmark_data[:,1], landmark_data[:,2]
@@ -56,8 +59,10 @@ class A_star:
                     if self.within_grid(l_idx + dx, l_idy + dy):
                         self.grid[l_idy + dy, l_idx + dx] = 1
 
-
+    #offline a* path planner
     def plan_path(self, start, goal): 
+        self.s_v, self.g_v = start, goal
+
         start_node = Node(self.position_to_index(*start))
         goal_node = Node(self.position_to_index(*goal))
 
@@ -80,7 +85,7 @@ class A_star:
             neighbors = self.get_neighbors(cur_node) 
             for neigh, cost in neighbors: 
                 neigh.g = cur_node.g + cost 
-                neigh.h = self.manhattan_heuristic(neigh.position,goal_node.position)
+                neigh.h = self.chebyshev_heuristic(neigh.position,goal_node.position)
                 neigh.f = neigh.g + neigh.h 
 
                 if neigh not in visited:
@@ -95,8 +100,9 @@ class A_star:
                             existing_neigh.f = existing_neigh.g + existing_neigh.h
                             existing_neigh.parent = cur_node
 
-
+    #online astar path planner
     def online_plan_path(self, start, goal):
+        self.s_v, self.g_v = start, goal
         start_node = Node(self.position_to_index(*start))
         goal_node = Node(self.position_to_index(*goal))
 
@@ -131,6 +137,7 @@ class A_star:
 
         return None
 
+    
     def manhattan_heuristic(self,start,goal): 
         return np.abs(goal[0]-start[0]) + np.abs(goal[1]-start[1])
     
@@ -160,11 +167,18 @@ class A_star:
     def position_to_index(self,pos_x,pos_y): 
         idx_x, idx_y = int((pos_x - self.x_range[0]) / self.cell_size) , int((pos_y - self.y_range[0]) / self.cell_size)
         return idx_x, idx_y
+    
+    def index_to_position(self, idx_x, idx_y):
+        pos_x = (idx_x * self.cell_size) + self.x_range[0]
+        pos_y = (idx_y * self.cell_size) + self.y_range[0]
+        return pos_x, pos_y
 
     def display_grid(self): 
         print(self.grid) 
     
     def visualize_results(self, path):
+        print("start:",self.s_v, "goal:",self.g_v)
+
         plt.figure(figsize=(5,10))
         plt.grid(color='black', linewidth=0.5)
         plt.xticks(np.arange(-0.5, self.grid.shape[1], 1), [])
@@ -174,14 +188,20 @@ class A_star:
 
         if path:
             path_x, path_y = zip(*path) 
-            plt.plot(path_x, path_y, 'ro-', markersize=1)
+            plt.plot(path_x, path_y, 'ro-', markersize=5.0)
+
+        # Highlight start and goal points
+        start_idx = self.position_to_index(self.s_v[0], self.s_v[1])
+        goal_idx = self.position_to_index(self.g_v[0], self.g_v[1])
+        
+        plt.plot(start_idx[0], start_idx[1], 'go', markersize=8.0)  # Green color for start
+        plt.plot(goal_idx[0], goal_idx[1], 'bo', markersize=8.0)    # Blue color for goal
 
         plt.title("A* Pathfinding Results")
         plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)  #remove padding
         plt.margins(0, 0)  # No margins
         plt.gca().xaxis.set_major_locator(plt.NullLocator())
         plt.gca().yaxis.set_major_locator(plt.NullLocator())
-
         plt.show()
 
 

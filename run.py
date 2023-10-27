@@ -1,9 +1,7 @@
 from a_star import A_star
 
-def run_test(set, algorithm):
-    a_star = A_star(1, (-2, 5), (-6, 6), .01)
+def run_test(set, algorithm, a_star):
     a_star.generate_grid()
-
     for row in set:
         if algorithm == "online":
             path = a_star.online_plan_path(row["start"], row["goal"])
@@ -25,13 +23,17 @@ def main():
         {"start": [-0.55, 1.45], "goal": [1.95, 3.95]}
     ]
 
-    test_set = "set2"  
-    algorithm = "online"  
+    #3
+    a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
+    run_test(set1,"offline",a_star) 
 
-    if test_set == "set1":
-        run_test(set1, algorithm)
-    elif test_set == "set2":
-        run_test(set2, algorithm)
+    #5
+    a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
+    run_test(set1,"online",a_star)
+
+    #7
+    a_star = A_star(1, (-2, 5), (-6, 6), 0.1)
+    run_test(set2,"online",a_star)
 
 if __name__ == "__main__":
     main()
