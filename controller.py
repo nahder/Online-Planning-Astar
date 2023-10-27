@@ -43,7 +43,7 @@ class IK_controller:
         x, y, heading = self.cur_pose
         angle_to_target = np.arctan2(yt - y, xt - x)
         rel_bearing = self.wrap_angle(angle_to_target - heading)
-        kp_dist, kp_angle = .6,.5
+        kp_dist, kp_angle = .35,.39
         v = kp_dist * self.distance((xt, yt), (x, y))  # linear vel
         w = kp_angle * rel_bearing  # angular vel 
 
