@@ -17,6 +17,7 @@ class IK_controller:
         self.goal = goal 
 
         self.path = self.planner.online_plan_path(self.start,self.goal) 
+        #pure pursuit; regenerate path to look ahead on
 
         self.cur_pose = (start[0],start[1],0.0) #x y theta
         self.dt = .1
@@ -32,15 +33,17 @@ class IK_controller:
     def distance(self,p1,p2): 
          return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)
     
+    def wrap_angle(self,angle):
+        return (angle + np.pi) % (2 * np.pi) - np.pi
+    
     def determine_command(self, target):
         #compute movement command to go to target
         xt, yt = self.planner.index_to_position(target[0], target[1]) #convert back from a* grid path to real world distances
 
         x, y, heading = self.cur_pose
         angle_to_target = np.arctan2(yt - y, xt - x)
-        rel_bearing = angle_to_target - heading
-
-        kp_dist, kp_angle = .8,.52
+        rel_bearing = self.wrap_angle(angle_to_target - heading)
+        kp_dist, kp_angle = .6,.5
         v = kp_dist * self.distance((xt, yt), (x, y))  # linear vel
         w = kp_angle * rel_bearing  # angular vel 
 
