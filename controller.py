@@ -30,6 +30,11 @@ class IK_controller:
         self.prev_pose = self.cur_pose 
         self.trajectory = [self.cur_pose]  
 
+        self.prev_distance_error = 0.0
+        self.prev_bearing_error = 0.0
+
+        
+
     def distance(self,p1,p2): 
          return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)
     
@@ -37,15 +42,27 @@ class IK_controller:
         return (angle + np.pi) % (2 * np.pi) - np.pi
     
     def determine_command(self, target):
-        #compute movement command to go to target
-        xt, yt = self.planner.index_to_position(target[0], target[1]) #convert back from a* grid path to real world distances
+        # compute movement command to go to target
+        xt, yt = self.planner.index_to_position(target[0], target[1]) 
 
         x, y, heading = self.cur_pose
         angle_to_target = np.arctan2(yt - y, xt - x)
         rel_bearing = self.wrap_angle(angle_to_target - heading)
-        kp_dist, kp_angle = .35,.39
-        v = kp_dist * self.distance((xt, yt), (x, y))  # linear vel
-        w = kp_angle * rel_bearing  # angular vel 
+        
+        distance_error = self.distance((xt, yt), (x, y))
+        bearing_error = rel_bearing
+
+        kp_dist, kp_angle = .62, .45
+
+        # derivative gains
+        kd_dist, kd_angle = 0.15, 0.0
+
+        # Calculate the error derivatives
+        distance_error_derivative = (distance_error - self.prev_distance_error) / self.dt
+        bearing_error_derivative = (bearing_error - self.prev_bearing_error) / self.dt
+
+        v = kp_dist * distance_error + kd_dist * distance_error_derivative  # linear vel with PD control
+        w = kp_angle * bearing_error + kd_angle * bearing_error_derivative  # angular vel with PD control
 
         # calculate and clip accelerations
         linear_accel = np.clip((v - self.prev_command[0]) / self.dt, -self.max_linear_accel, self.max_linear_accel)
@@ -54,9 +71,14 @@ class IK_controller:
         # calculate adjusted velocities using clipped accelerations
         v = self.prev_command[0] + linear_accel * self.dt
         w = self.prev_command[1] + angular_accel * self.dt
+
+        # store the current errors as previous errors for the next iteration
+        self.prev_distance_error = distance_error
+        self.prev_bearing_error = bearing_error
         
         self.prev_command = (v, w)
         return v, w
+
 
     def move_robot(self, command):
         #given a command, update the robots pose
@@ -68,7 +90,7 @@ class IK_controller:
     def follow_waypoints(self):
         #go thru all the target points, move on once within distance threshold
         for target in self.path:
-            while self.distance(self.cur_pose[:2], self.planner.index_to_position(target[0], target[1])) > 0.55:
+            while self.distance(self.cur_pose[:2], self.planner.index_to_position(target[0], target[1])) > .5:
                 cmd = self.determine_command(target)
                 self.move_robot(cmd)
 
@@ -119,8 +141,8 @@ def main():
         {"start": [4.5, 3.5], "goal": [4.5, -1.5]},
         {"start": [-0.5, 5.5], "goal": [1.5, -3.5]}
     ]
-    start = (0.5,-1.5) 
-    goal = (0.5,1.5) 
+    start = (-.5,-5.5) 
+    goal = (1.5,-3.5) 
     controller = IK_controller(a_star,start,goal) 
     controller.follow_waypoints()
     controller.visualize_results() 
