@@ -1,5 +1,4 @@
 from a_star import A_star
-from motion_model import sampling_motion_model, motion_model
 import numpy as np 
 import matplotlib.pyplot as plt 
 from matplotlib.animation import FuncAnimation
@@ -21,7 +20,9 @@ class IK_controller:
 
         self.world_path = self.convert_path_to_world(self.grid_path) #convert to world coordinates
 
-        self.cur_pose = (start[0],start[1],-np.pi/2) #x y theta
+        self.grid_start = self.planner.world_to_grid(*self.start)
+
+        self.cur_pose = (start[0]-(self.planner.cell_size/2),start[1]-(self.planner.cell_size/2),-np.pi/2) #x y theta
 
         self.dt = .1
         self.max_linear_accel = 0.288
@@ -30,6 +31,24 @@ class IK_controller:
         self.prev_command = (0.0,0.0) 
         self.prev_pose = self.cur_pose 
         self.trajectory = [self.cur_pose]  
+
+    def motion_model(self,u,prev_state,dt): 
+        #add noise later
+        x_prev,y_prev,theta_prev = prev_state  
+
+        v,w = u 
+
+        eps = 0.0
+        x_new = x_prev + v*(1+eps) * np.cos(theta_prev)*dt 
+        y_new = y_prev + v*(1+eps) * np.sin(theta_prev)*dt 
+        theta_new = theta_prev + w*(1+eps)*dt
+
+        if theta_new>np.pi: 
+            theta_new -= 2*np.pi 
+        else: 
+            theta_new += 2*np.pi 
+
+        return x_new,y_new,theta_new
 
 
     def distance(self,p1,p2): 
@@ -51,12 +70,11 @@ class IK_controller:
         
         distance_error = self.distance((xt, yt), (x, y))
 
-        kp_dist, kp_angle = .3, .5
+        kp_dist, kp_angle = .3, 2.5
 
-        v = kp_dist * distance_error  # linear vel with PD control
-        w = kp_angle * rel_bearing  # angular vel with PD control
+        v = kp_dist * distance_error  
+        w = kp_angle * rel_bearing 
 
-        # calculate and clip accelerations
         linear_accel = np.clip((v - self.prev_command[0]) / self.dt, -self.max_linear_accel, self.max_linear_accel)
         angular_accel = np.clip((w - self.prev_command[1]) / self.dt, -self.max_angular_accel, self.max_angular_accel)
 
@@ -71,16 +89,13 @@ class IK_controller:
 
     def move_robot(self, command):
         #given a command, update the robots pose
-        new_pose = motion_model(command, self.cur_pose, self.dt)
+        new_pose = self.motion_model(command, self.cur_pose, self.dt)
         self.prev_pose = self.cur_pose 
         self.cur_pose = new_pose 
         self.trajectory.append(self.cur_pose)
     
     def follow_waypoints(self):
         plt.figure(figsize=(5,10))
-        plt.grid(color='black', linewidth=0.5)
-        plt.xticks(np.arange(-0.5, self.planner.grid.shape[1], 1), [])
-        plt.yticks(np.arange(-0.5, self.planner.grid.shape[0], 1), [])
         plt.imshow(self.planner.grid, cmap='gray_r')
 
         if self.grid_path:
@@ -103,7 +118,7 @@ class IK_controller:
                 traj_x_grid, traj_y_grid = zip(*[self.real_to_grid(x, y) for x, y in zip(traj_x, traj_y)])
                 plt.plot(traj_x_grid, traj_y_grid, 'b-', markersize=3.0)
                 target_grid = self.planner.world_to_grid(target[0], target[1])
-                plt.plot(target_grid[0], target_grid[1], 'yo', markersize=8.0)    # yellow color for current target
+                plt.plot(target_grid[0], target_grid[1], 'yo', markersize=3.0)    # yellow color for current target
                 plt.pause(0.02)
 
         plt.title("A* Pathfinding with Robot's Trajectory")
@@ -160,8 +175,8 @@ def main():
         {"start": [-0.5, 5.5], "goal": [1.5, -3.5]}
     ]
 
-    start = (-.5,5.5) 
-    goal = (1.5,-3.5) 
+    start = (0.5,-1.5) 
+    goal = (0.5,1.5) 
     controller = IK_controller(a_star,start,goal) #start, goal in world coordinates 
     controller.follow_waypoints()
     # controller.visualize_results() 
