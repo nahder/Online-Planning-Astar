@@ -60,4 +60,20 @@ def sample_normal_distribution(b):
     return 0.5 * np.sum(random_values)
 
 
+def motion_model(u,prev_state,dt): 
+    #add noise later
+    x_prev,y_prev,theta_prev = prev_state  
 
+    v,w = u 
+
+    eps = 0.0
+    x_new = x_prev + v*(1+eps) * np.cos(theta_prev)*dt 
+    y_new = y_prev + v*(1+eps) * np.sin(theta_prev)*dt 
+    theta_new = theta_prev + w*(1+eps)*dt
+
+    if theta_new>np.pi: 
+        theta_new -= 2*np.pi 
+    else: 
+        theta_new += 2*np.pi 
+
+    return x_new,y_new,theta_new
