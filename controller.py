@@ -11,7 +11,8 @@ from matplotlib.animation import FuncAnimation
 # use a sampling rate of dt = .1s.
 
 class IK_controller: 
-    def __init__(self, astar_planner, start=None, goal=None): 
+    def __init__(self, astar_planner, start=None, goal=None, show_animation=True): 
+    
         self.planner = astar_planner
         self.start = start #world coords
         self.goal = goal #world coords
@@ -31,6 +32,7 @@ class IK_controller:
         self.prev_command = (0.0,0.0) 
         self.prev_pose = self.cur_pose 
         self.trajectory = [self.cur_pose]  
+        self.show_animation = show_animation
 
     def motion_model(self,u,prev_state,dt): 
         #add noise later
@@ -63,7 +65,6 @@ class IK_controller:
     def control_cmd(self, target_world):
         # compute movement command to go to target
         xt, yt = target_world
-
         x, y, heading = self.cur_pose
         angle_to_target = self.wrap_angle(np.arctan2(yt - y, xt - x))
         rel_bearing = self.wrap_angle(angle_to_target - heading)
@@ -95,37 +96,10 @@ class IK_controller:
         self.trajectory.append(self.cur_pose)
     
     def follow_waypoints(self):
-        plt.figure(figsize=(5,10))
-        plt.imshow(self.planner.grid, cmap='gray_r')
-
-        if self.grid_path:
-            path_x, path_y = zip(*self.grid_path)
-            plt.plot(path_x, path_y, 'ro-', markersize=5.0)
-
-        # highlight start and goal points
-        start_idx = self.planner.world_to_grid(self.start[0], self.start[1])
-        goal_idx = self.planner.world_to_grid(self.goal[0], self.goal[1])
-        
-        plt.plot(start_idx[0], start_idx[1], 'go', markersize=8.0)  # green color for start
-        plt.plot(goal_idx[0], goal_idx[1], 'bo', markersize=8.0)    # blue color for goal
-        
-        for target in self.world_path: #target in world coordinates
+        for target in self.world_path:  # target in world coordinates
             while self.distance(self.cur_pose[:2], target) > .2:
                 cmd = self.control_cmd(target)
                 self.move_robot(cmd)
-                
-                traj_x, traj_y, _ = zip(*self.trajectory)
-                traj_x_grid, traj_y_grid = zip(*[self.real_to_grid(x, y) for x, y in zip(traj_x, traj_y)])
-                plt.plot(traj_x_grid, traj_y_grid, 'b-', markersize=3.0)
-                target_grid = self.planner.world_to_grid(target[0], target[1])
-                plt.plot(target_grid[0], target_grid[1], 'yo', markersize=3.0)    # yellow color for current target
-                plt.pause(0.02)
-
-        plt.title("A* Pathfinding with Robot's Trajectory")
-        plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)  # remove padding
-        plt.margins(0, 0)  # No margins
-        plt.show()
-
 
     def real_to_grid(self, x_real, y_real):
         x_min, y_min = -2, -6
@@ -133,39 +107,71 @@ class IK_controller:
         y_grid = (y_real - y_min) / self.planner.cell_size
         return x_grid, y_grid
             
+
     def visualize_results(self):
-        print("start:", self.start, "goal:", self.goal)
-        plt.figure(figsize=(5,10))
-        plt.grid(color='black', linewidth=0.5)
-        plt.xticks(np.arange(-0.5, self.planner.grid.shape[1], 1), [])
-        plt.yticks(np.arange(-0.5, self.planner.grid.shape[0], 1), [])
-        plt.imshow(self.planner.grid, cmap='gray_r')
+        plt.figure(figsize=(5, 10))
 
-        # plotting the A* path
-        if self.grid_path:
-            path_x, path_y = zip(*self.grid_path)
-            plt.plot(path_x, path_y, 'ro-', markersize=5.0)
+        if self.show_animation:
+            # Animate the trajectory and heading
+            for i, pose in enumerate(self.trajectory):
+                plt.clf()  # Clear the figure to remove the previous arrow
+                plt.imshow(self.planner.grid, cmap='gray_r')  # Redraw the grid
+                self.redraw_static_elements()  # Redraw the static elements like the A* path, start, and goal
 
-        # highlight start and goal points
-        start_idx = self.planner.world_to_grid(self.start[0], self.start[1])
-        goal_idx = self.planner.world_to_grid(self.goal[0], self.goal[1])
+                # Plot the trajectory up to the current pose in blue
+                traj_up_to_current = self.trajectory[:i+1]
+                traj_x, traj_y, _ = zip(*traj_up_to_current)
+                traj_x_grid, traj_y_grid = zip(*[self.real_to_grid(x, y) for x, y in zip(traj_x, traj_y)])
+                plt.plot(traj_x_grid, traj_y_grid, 'o', color='blue', markersize=1.0, zorder=2)
 
-        plt.plot(start_idx[0], start_idx[1], 'go', markersize=8.0)  # green color for start
-        plt.plot(goal_idx[0], goal_idx[1], 'bo', markersize=8.0)    # blue color for goal
+                # Draw a magenta arrow for the heading with a higher zorder
+                self.draw_heading_arrow(pose, scale=0.2, color='magenta', zorder=3)
+                plt.pause(0.02)
 
-        # plotting the robot's trajectory
-        traj_x, traj_y, _ = zip(*self.trajectory)
-        traj_x_grid, traj_y_grid = zip(*[self.real_to_grid(x, y) for x, y in zip(traj_x, traj_y)])
-        plt.plot(traj_x_grid, traj_y_grid, 'b-', markersize=3.0)  
+                # Set plot limits and title
 
-        plt.title("A* Pathfinding with Robot's Trajectory")
-        plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)  #remove padding
-        plt.margins(0, 0)  # No margins
-        plt.gca().xaxis.set_major_locator(plt.NullLocator())
-        plt.gca().yaxis.set_major_locator(plt.NullLocator())
-        plt.show()
+                plt.title("A* Pathfinding with Robot's Trajectory")
 
+            plt.show()  # Show the animation
+        else:
+            # Show the static plot with heading arrows at certain timesteps
+            plt.imshow(self.planner.grid, cmap='gray_r')  # Redraw the grid
 
+            self.redraw_static_elements()  # Redraw the static elements
+
+            # Plot the final trajectory in blue
+            traj_x, traj_y, _ = zip(*self.trajectory)
+            traj_x_grid, traj_y_grid = zip(*[self.real_to_grid(x, y) for x, y in zip(traj_x, traj_y)])
+            plt.plot(traj_x_grid, traj_y_grid, 'o', color='blue', markersize=1.0, zorder=2)
+
+            # Draw magenta heading arrows at certain timesteps
+            for i, pose in enumerate(self.trajectory):
+                if i % 20 == 0:  # Adjust the timestep interval as needed
+                    self.draw_heading_arrow(pose, scale=0.2, color='magenta', zorder=3)
+
+            plt.title("A* Pathfinding with Robot's Trajectory")
+            plt.show()  # Show the final static plot
+
+    def redraw_static_elements(self):
+        # Redraw static elements like the A* path, start, and goal points
+        path_x, path_y = zip(*self.grid_path)
+        plt.plot(path_x, path_y, color='grey', marker='o', linestyle='-', markersize=5.0, zorder=1)
+        start_idx = self.planner.world_to_grid(*self.start)
+        goal_idx = self.planner.world_to_grid(*self.goal)
+        plt.plot(start_idx[0], start_idx[1], 'o', color='red', markersize=8.0, zorder=2)
+        plt.plot(goal_idx[0], goal_idx[1], 'o', color='green', markersize=8.0, zorder=2)
+
+    def draw_heading_arrow(self, pose, scale=1.0, color='magenta', zorder=3):
+        x, y, theta = pose
+        dx = scale * np.cos(theta)  # Calculate the change in x
+        dy = scale * np.sin(theta)  # Calculate the change in y
+        x_grid, y_grid = self.real_to_grid(x, y)
+        plt.arrow(x_grid, y_grid, dx, dy, head_width=0.05, head_length=0.15, fc=color, ec=color, zorder=zorder)
+        
+    def highlight_path(self, path, value=0.8):
+        # value=0.8 for light gray in a grayscale image where 1 is white and 0 is black
+        for x, y in path:
+            self.grid[y, x] = value  # Update the grid cell to light gray for the A* path
 
 def main(): 
     a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
@@ -177,9 +183,9 @@ def main():
 
     start = (0.5,-1.5) 
     goal = (0.5,1.5) 
-    controller = IK_controller(a_star,start,goal) #start, goal in world coordinates 
+    controller = IK_controller(a_star,start,goal,True) #start, goal in world coordinates 
     controller.follow_waypoints()
-    # controller.visualize_results() 
+    controller.visualize_results() 
 
 
 if __name__ == "__main__":

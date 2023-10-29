@@ -77,6 +77,8 @@ class A_star:
                 while cur_node: 
                     path.append(cur_node.position) 
                     cur_node = cur_node.parent 
+                for x, y in path:
+                    self.grid[y, x] = 0.35  # Set the path cells to light gray
                 return path[::-1]
 
             visited.add(cur_node) 
@@ -117,6 +119,8 @@ class A_star:
             frontier.remove(cur_node)
 
             if cur_node == goal_node:
+                for x, y in path:
+                    self.grid[y, x] = 0.35  # Set the path cells to light gray
                 return path
 
             neighbors = self.get_neighbors(cur_node)
