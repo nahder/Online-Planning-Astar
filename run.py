@@ -1,4 +1,5 @@
 from a_star import A_star
+from controller import IK_controller
 
 def run_test(set, algorithm, a_star):
     a_star.generate_grid()
@@ -10,6 +11,8 @@ def run_test(set, algorithm, a_star):
             path = a_star.plan_path(row["start"], row["goal"])
 
         a_star.visualize_results(path)
+
+
 
 def main():
     set1 = [
@@ -24,17 +27,26 @@ def main():
         {"start": [-0.55, 1.45], "goal": [1.95, 3.95]}
     ]
 
-    #3
+    #3 plan paths from set 1 with offline A* 
     a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
     run_test(set1,"offline",a_star) 
 
-    #5
+    #5: plan paths from set 1 with online A*
     a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
     run_test(set1,"online",a_star)
 
-    #7
+    #7: plan paths on set2 with online A*
     a_star = A_star(1, (-2, 5), (-6, 6), 0.1)
     run_test(set2,"online",a_star)
+
+    #9: drive paths generated in 7 (set2) with IK controller
+    for path in set2:
+        start = path["start"]
+        goal = path["goal"]
+        planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+        controller.follow_waypoints()
+        controller.visualize_results()
 
 if __name__ == "__main__":
     main()

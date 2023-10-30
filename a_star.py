@@ -170,7 +170,7 @@ class A_star:
     def within_grid(self,x,y): 
         return 0<=x<self.grid.shape[1] and 0 <=y < self.grid.shape[0]
 
-    def world_to_grid(self,pos_x,pos_y): 
+    def world_to_grid(self,pos_x,pos_y): #takes in point in world frame, returns coordinates in grid frame
         idx_x, idx_y = int((pos_x - self.x_range[0]) / self.cell_size) , int((pos_y - self.y_range[0]) / self.cell_size)
         return idx_x, idx_y
     
@@ -230,7 +230,7 @@ def main():
     controller = IK_controller(astar_planner=planner,start=start,goal=goal,
                             show_animation=False) #start, goal in world coordinates 
 
-    planner.plan_while_driving(controller, start, goal)
+    # planner.plan_while_driving(controller, start, goal)
 
     
 
