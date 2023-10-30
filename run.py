@@ -5,6 +5,7 @@ def run_test(set, algorithm, a_star):
     for row in set:
         if algorithm == "online":
             path = a_star.online_plan_path(row["start"], row["goal"])
+
         elif algorithm == "offline":
             path = a_star.plan_path(row["start"], row["goal"])
 

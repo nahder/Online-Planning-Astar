@@ -40,8 +40,10 @@ class IK_controller:
 
         self.grid_goal = self.planner.world_to_grid(*self.goal) #world coords
 
-        self.cur_pose = (start[0]-(self.planner.cell_size/2),start[1]-(self.planner.cell_size/2),-np.pi/2) #x y theta
+        self.grid_goal = (6,4.0)
 
+        self.cur_pose = (start[0]-(self.planner.cell_size/2),start[1]-(self.planner.cell_size/2),-np.pi/2) #x y theta
+        
         self.dt = .1
         self.max_linear_accel = 0.288
         self.max_angular_accel = 5.579
@@ -111,13 +113,6 @@ class IK_controller:
 
         self.prev_command = (v, w)
         return v, w
-
-    def move_robot(self, command):
-        #given a command, update the robots pose
-        new_pose = self.motion_model(command, self.cur_pose, self.dt)
-        self.prev_pose = self.cur_pose 
-        self.cur_pose = new_pose 
-        self.trajectory.append(self.cur_pose)
     
     def follow_waypoints(self):
         for i, target in enumerate(self.world_path):  # target in world coordinates
@@ -128,82 +123,66 @@ class IK_controller:
                 self.reached_goal = True
                 print("reached goal")
 
+    def move_robot(self, command):
+        new_pose = self.motion_model(command, self.cur_pose, self.dt)
+        self.prev_pose = self.cur_pose 
+        self.cur_pose = new_pose 
+        self.trajectory.append(self.cur_pose)
+
     def follow_waypoint(self, target_world):
-        while self.distance(self.cur_pose[:2], target_world) > 0.2:
+        while self.distance(self.cur_pose[:2], target_world) > .2:
             cmd = self.control_cmd(target_world)
             self.move_robot(cmd)
         
-
     def plan_while_driving(self): 
         start_node = Node(self.grid_start)
         goal_node = Node(self.grid_goal)
-        frontier = [start_node]
+
+        frontier = {start_node}
         visited = set()
         path = []
+        
+        i=0 
+        while frontier and i<1000:
+            i+=1
+            cur_node = min(frontier, key=lambda x: x.f) #so this always has the
 
-        goal_tolerance = .1 * self.planner.cell_size
-        visited_tolerance = .1 * self.planner.cell_size
-        neighbor_tolerance = .1 * self.planner.cell_size
+            self.follow_waypoint(self.planner.grid_to_world(*cur_node.position)) #this always has the same target
+            # visited.add(cur_node.position)
 
-        while frontier:
-            cur_node = frontier[0]  # Assume the first node in the list has the smallest f value
-            self.follow_waypoint(self.planner.grid_to_world(*cur_node.position))
+            frontier.remove(cur_node)
+            
+            cur_node.position = self.planner.world_to_grid(*self.cur_pose[:2])
 
-            # Robot's actual position might be different due to noise
-            actual_position = self.planner.world_to_grid(*self.cur_pose[:2])
-            print(f"Actual position: {actual_position}")  # Debug print
-
-            # Check if the actual position is close enough to the goal
-            if self.planner.euclidean_distance(actual_position, goal_node.position) <= goal_tolerance:
+            visited.add(cur_node.position)
+            path.append(cur_node.position)
+            
+            if cur_node == goal_node:
                 self.reached_goal = True
-                path.append(self.cur_pose)
-                print("Goal reached by tolerance")  # Debug print
-                break
+                return path
 
-            # Avoid adding the same node to visited nodes (considering tolerance)
-            if not any(self.planner.euclidean_distance(actual_position, v.position) <= visited_tolerance for v in visited):
-                visited.add(Node(actual_position))  # Add the actual node to visited
-                path.append(self.cur_pose)  # Save the actual pose
-                print(f"Visited nodes: {visited}")  # Debug print
+            neighbors = self.planner.get_neighbors(cur_node)
+            best_neighbor = None
+            lowest_f = float('inf')
+        
+            print("cur node pos", cur_node.position)
+            
+            for neigh, cost in neighbors:
+                print("neigh pos", neigh.position)
+                if neigh.position not in visited:
+                    neigh.g = cur_node.g + cost
+                    neigh.h = self.planner.euclidean_distance(neigh.position, goal_node.position)
+                    neigh.f = neigh.g + neigh.h
+                    if neigh.f < lowest_f:
+                        lowest_f = neigh.f
+                        best_neighbor = neigh
 
-                # Create a new node with the actual position
-                actual_node = Node(actual_position)
-                actual_node.g = cur_node.g + self.planner.euclidean_distance(cur_node.position, actual_position)
-                actual_node.h = self.planner.euclidean_distance(actual_position, goal_node.position)
-                actual_node.f = actual_node.g + actual_node.h
-
-                neighbors = self.planner.get_neighbors(actual_node)
-                best_neighbor = None
-                lowest_f = float('inf')
-
-                # Evaluate neighbors considering neighbor tolerance
-                for neigh, cost in neighbors:
-                    if not any(self.planner.euclidean_distance(neigh.position, v.position) <= neighbor_tolerance for v in visited):
-                        neigh.g = actual_node.g + cost
-                        neigh.h = self.planner.euclidean_distance(neigh.position, goal_node.position)
-                        neigh.f = neigh.g + neigh.h
-                        if neigh.f < lowest_f:
-                            lowest_f = neigh.f
-                            best_neighbor = neigh
-
-                # Add the best neighbor to the frontier if one was found
-                if best_neighbor:
-                    frontier.append(best_neighbor)
-                    print(f"Best neighbor added to frontier: {best_neighbor.position}")  # Debug print
-                else:
-                    if self.planner.euclidean_distance(actual_position, goal_node.position) <= 2 * goal_tolerance:
-                        print("Close to goal, moving directly towards it.")
-                        self.follow_waypoint(self.planner.grid_to_world(*goal_node.position))
-                        self.reached_goal = True
-                        path.append(self.cur_pose)
-                        break
-
-            frontier.pop(0)  # Remove the current node from the frontier
-            print(f"Frontier size after pop: {len(frontier)}")  # Debug print
-
-        return path 
-
-
+            if best_neighbor:
+                frontier.add(best_neighbor)
+            
+        return None 
+    
+    
     def real_to_grid(self, x_real, y_real):
         x_min, y_min = -2, -6
         x_grid = (x_real - x_min) / self.planner.cell_size
@@ -288,11 +267,11 @@ class IK_controller:
 def main(): 
     a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
 
-    start = (-.5, 5.5)
-    goal = (1.5, -3.5)
+    start = (4.5,3.5)
+    goal = (4.5, -1.5)
     controller = IK_controller(a_star,start,goal,True) #start, goal in world coordinates 
     # controller.follow_waypoints()
-    controller.plan_while_driving() 
+    controller.plan_while_driving()
     controller.visualize_results()
 
 

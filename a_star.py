@@ -1,5 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
+import controller 
+from controller import *
 
 #reads in .dat file into a np array
 def read_dat_file(file_path):
@@ -71,14 +73,13 @@ class A_star:
         visited = set() #set for o(1) lookup to see if it exists
         
         while frontier: 
+
             cur_node = min(frontier, key=lambda x:x.f)
             if cur_node == goal_node: 
                 path = [] 
                 while cur_node: 
                     path.append(cur_node.position) 
                     cur_node = cur_node.parent 
-                for x, y in path:
-                    self.grid[y, x] = 0.35  # Set the path cells to light gray
                 return path[::-1]
 
             visited.add(cur_node) 
@@ -106,6 +107,7 @@ class A_star:
     def online_plan_path(self, start, goal):
         self.s_v, self.g_v = start, goal
         start_node = Node(self.world_to_grid(*start))
+        # print(start_node.position)
         goal_node = Node(self.world_to_grid(*goal))
 
         frontier = {start_node}
@@ -114,13 +116,11 @@ class A_star:
 
         while frontier:
             cur_node = min(frontier, key=lambda x: x.f)
-            visited.add(cur_node.position)
             path.append(cur_node.position)
             frontier.remove(cur_node)
+            visited.add(cur_node.position)
 
             if cur_node == goal_node:
-                for x, y in path:
-                    self.grid[y, x] = 0.35  # Set the path cells to light gray
                 return path
 
             neighbors = self.get_neighbors(cur_node)
@@ -140,7 +140,6 @@ class A_star:
                 frontier.add(best_neighbor)
 
         return None
-
     
     def manhattan_heuristic(self,start,goal): 
         return np.abs(goal[0]-start[0]) + np.abs(goal[1]-start[1])
@@ -150,11 +149,9 @@ class A_star:
         dy = abs(goal[1] - start[1])
         return max(dx, dy)
 
-
     def euclidean_distance(self,p1,p2): 
          return .5 * np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)
     
-
     def get_neighbors(self,node): 
         neighbors = []
         pos_x, pos_y = node.position 
@@ -186,8 +183,7 @@ class A_star:
         print(self.grid) 
     
     def visualize_results(self, path):
-        print("start:",self.s_v, "goal:",self.g_v)
-
+        # print("start:",self.s_v, "goal:",self.g_v)
         plt.figure(figsize=(5,10))
         plt.grid(color='black', linewidth=0.5)
         plt.xticks(np.arange(-0.5, self.grid.shape[1], 1), [])
@@ -214,3 +210,29 @@ class A_star:
         plt.show()
 
 
+        
+def main():
+    planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+    set1 = [
+    {"start": [0.5, -1.5], "goal": [0.5, 1.5]},
+    {"start": [4.5, 3.5], "goal": [4.5, -1.5]},
+    {"start": [-0.5, 5.5], "goal": [1.5, -3.5]}
+    ]
+
+    set2 = [
+    {"start": [2.45, -3.55], "goal": [0.95, -1.55]},
+    {"start": [4.95, -0.05], "goal": [2.45, 0.25]},
+    {"start": [-0.55, 1.45], "goal": [1.95, 3.95]}
+    ]
+
+    start = (-.5, 5.5)
+    goal = (1.5, -3.5)
+    controller = IK_controller(astar_planner=planner,start=start,goal=goal,
+                            show_animation=False) #start, goal in world coordinates 
+
+    planner.plan_while_driving(controller, start, goal)
+
+    
+
+if __name__ == "__main__":
+    main()
