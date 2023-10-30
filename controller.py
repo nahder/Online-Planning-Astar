@@ -58,8 +58,8 @@ class IK_controller:
         x_prev, y_prev, theta_prev = prev_state
         v, w = u
 
-        sigma_v = 0.01
-        sigma_w = 0.01
+        sigma_v = 0.00
+        sigma_w = 0.00
 
         v_noisy = v + np.random.normal(0, sigma_v)
         w_noisy = w + np.random.normal(0, sigma_w)
@@ -91,7 +91,7 @@ class IK_controller:
         
         distance_error = self.distance((xt, yt), (x, y))
 
-        kp_dist, kp_angle = .31, 2.5
+        kp_dist, kp_angle = .8,3.5
 
         v = kp_dist * distance_error  
         w = kp_angle * rel_bearing 
@@ -104,6 +104,7 @@ class IK_controller:
         
         if angular_accel > self.max_angular_accel or -angular_accel < -self.max_angular_accel:
             w = self.prev_command[1] + angular_accel * self.dt
+        
 
         self.prev_command = (v, w)
         return v, w
@@ -127,7 +128,7 @@ class IK_controller:
         while self.distance(self.cur_pose[:2], target_world) > .2:
             cmd = self.control_cmd(target_world)
             self.move_robot(cmd)
-        print("waypoint reached") 
+        # print("waypoint reached") 
     
     def plan_while_driving(self): 
         #the online planner from a_star.py returns the whole path from start to goal.
@@ -150,16 +151,17 @@ class IK_controller:
 
         while frontier:
             cur_node = min(frontier, key=lambda x: x.f)
-
             self.follow_waypoint(self.planner.grid_to_world(*cur_node.position))
             #actual position: convert cur pose to grid with real_to_grid_rounded
+            visited.add(cur_node.position)
             path.append(cur_node.position)
             frontier.remove(cur_node)
-            visited.add(cur_node.position)
 
-            cur_node = Node(self.real_to_grid_rounded(*self.cur_pose[:2]))
-
+            cur_node.position = self.cur_pose_grid
+            
             if cur_node == goal_node:
+                print("goal reached")
+                self.reached_goal = True
                 return path
 
             neighbors = self.planner.get_neighbors(cur_node)
@@ -249,7 +251,7 @@ class IK_controller:
         
 
 def main(): 
-    a_star = A_star(1, (-2, 5), (-6, 6), .1)
+    a_star = A_star(1, (-2, 5), (-6, 6), 0.1)
 
     # set1 = [
     #     {"start": [0.5, -1.5], "goal": [0.5, 1.5]},
@@ -263,11 +265,21 @@ def main():
     #     {"start": [-0.55, 1.45], "goal": [1.95, 3.95]}
     # ]
 
-    start = (4.95,-.05)
-    goal = (2.45, 0.25)
+    # start = (4.95,-.05)
+    # goal = (2.45, 0.25)
+
+    # start = (-.55, 1.45) 
+    # goal = (1.95, 3.95) 
+
+    start = (2.45, -3.55)
+    goal = (.95, -1.55) 
+
     controller = IK_controller(a_star,start,goal,True) #start, goal in world coordinates 
     # controller.follow_waypoints()
     controller.plan_while_driving()
+
+    # for target in path: 
+    #     controller.follow_waypoint(controller.planner.grid_to_world(*target))
     controller.visualize_results()
 
 
