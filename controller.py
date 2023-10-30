@@ -58,8 +58,8 @@ class IK_controller:
         x_prev, y_prev, theta_prev = prev_state
         v, w = u
 
-        sigma_v = 0.00
-        sigma_w = 0.00
+        sigma_v = 0.05
+        sigma_w = 0.1
 
         v_noisy = v + np.random.normal(0, sigma_v)
         w_noisy = w + np.random.normal(0, sigma_w)
@@ -125,7 +125,8 @@ class IK_controller:
         self.trajectory.append(self.cur_pose)
 
     def follow_waypoint(self, target_world):
-        while self.distance(self.cur_pose[:2], target_world) > .2:
+        
+        while self.distance(self.cur_pose[:2], target_world) > .05:
             cmd = self.control_cmd(target_world)
             self.move_robot(cmd)
         # print("waypoint reached") 
@@ -138,7 +139,6 @@ class IK_controller:
         #then, we will see where we actually ended up.
         #then, we will replan using the neighbors of the grid position we actually ended up at 
         #we will repeat this process until we reach the goal
-        
         first_target = self.world_path[0] 
         self.follow_waypoint(first_target)
 
@@ -179,9 +179,7 @@ class IK_controller:
                         
             if best_neighbor: 
                 frontier.add(best_neighbor)
-
         return None
-
 
 
     def real_to_grid(self, x_real, y_real):
@@ -274,7 +272,7 @@ def main():
     start = (2.45, -3.55)
     goal = (.95, -1.55) 
 
-    controller = IK_controller(a_star,start,goal,True) #start, goal in world coordinates 
+    controller = IK_controller(a_star,start,goal,False) #start, goal in world coordinates 
     # controller.follow_waypoints()
     controller.plan_while_driving()
 
