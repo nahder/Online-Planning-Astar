@@ -12,8 +12,6 @@ def run_test(set, algorithm, a_star):
 
         a_star.visualize_results(path)
 
-
-
 def main():
     set1 = [
         {"start": [0.5, -1.5], "goal": [0.5, 1.5]},
@@ -46,6 +44,33 @@ def main():
         planner = A_star(1, (-2, 5), (-6, 6), 0.1)
         controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
         controller.follow_waypoints()
+        controller.visualize_results()
+
+    # 10: plan set2 paths while driving them
+    for path in set2:
+        start = path["start"]
+        goal = path["goal"]
+        planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+        controller.plan_while_driving()
+        controller.visualize_results()
+
+    #11: plan while driving, set 1, on the finer grid
+    for path in set1:
+        start = path["start"]
+        goal = path["goal"]
+        planner = A_star(1, (-2, 5), (-6, 6), 1.0)
+        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+        controller.plan_while_driving()
+        controller.visualize_results()
+
+    #11b: plan while driving set 1, on the coarser grid 
+    for path in set1:
+        start = path["start"]
+        goal = path["goal"]
+        planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+        controller.plan_while_driving()
         controller.visualize_results()
 
 if __name__ == "__main__":

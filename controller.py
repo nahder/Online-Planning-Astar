@@ -105,7 +105,6 @@ class IK_controller:
         if angular_accel > self.max_angular_accel or -angular_accel < -self.max_angular_accel:
             w = self.prev_command[1] + angular_accel * self.dt
         
-
         self.prev_command = (v, w)
         return v, w
     
@@ -116,7 +115,7 @@ class IK_controller:
                 self.move_robot(cmd)
             if i == len(self.world_path) - 1:
                 self.reached_goal = True
-                print("reached goal")
+                # print("reached goal")
 
     def move_robot(self, command):
         new_pose = self.motion_model(command, self.cur_pose, self.dt)
@@ -126,7 +125,7 @@ class IK_controller:
 
     def follow_waypoint(self, target_world):
         
-        while self.distance(self.cur_pose[:2], target_world) > .05:
+        while self.distance(self.cur_pose[:2], target_world) > .01:
             cmd = self.control_cmd(target_world)
             self.move_robot(cmd)
         # print("waypoint reached") 
@@ -160,7 +159,7 @@ class IK_controller:
             cur_node.position = self.cur_pose_grid
             
             if cur_node == goal_node:
-                print("goal reached")
+                # print("goal reached")
                 self.reached_goal = True
                 return path
 
