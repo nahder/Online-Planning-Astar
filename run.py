@@ -26,41 +26,41 @@ def main():
     ]
 
     #3 plan paths from set 1 with offline A* 
-    a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
-    run_test(set1,"offline",a_star) 
+    # a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
+    # run_test(set1,"offline",a_star) 
 
     #5: plan paths from set 1 with online A*
-    a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
-    run_test(set1,"online",a_star)
+    # a_star = A_star(1, (-2, 5), (-6, 6), 1.0)
+    # run_test(set1,"online",a_star)
 
     #7: plan paths on set2 with online A*
-    a_star = A_star(1, (-2, 5), (-6, 6), 0.1)
-    run_test(set2,"online",a_star)
+    # a_star = A_star(1, (-2, 5), (-6, 6), 0.1)
+    # run_test(set2,"online",a_star)
 
     #9: drive paths generated in 7 (set2) with IK controller
-    for path in set2:
-        start = path["start"]
-        goal = path["goal"]
-        planner = A_star(1, (-2, 5), (-6, 6), 0.1)
-        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
-        controller.follow_waypoints()
-        controller.visualize_results()
+    # for path in set2:
+    #     start = path["start"]
+    #     goal = path["goal"]
+    #     planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+    #     controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+    #     controller.follow_waypoints()
+    #     controller.visualize_results()
 
     # 10: plan set2 paths while driving them
-    for path in set2:
-        start = path["start"]
-        goal = path["goal"]
-        planner = A_star(1, (-2, 5), (-6, 6), 0.1)
-        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
-        controller.plan_while_driving()
-        controller.visualize_results()
+    # for path in set2:
+    #     start = path["start"]
+    #     goal = path["goal"]
+    #     planner = A_star(1, (-2, 5), (-6, 6), 0.1)
+    #     controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+    #     controller.plan_while_driving()
+    #     controller.visualize_results()
 
     #11: plan while driving, set 1, on the finer grid
     for path in set1:
         start = path["start"]
         goal = path["goal"]
         planner = A_star(1, (-2, 5), (-6, 6), 1.0)
-        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=False)
+        controller = IK_controller(astar_planner=planner, start=start, goal=goal, show_animation=True)
         controller.plan_while_driving()
         controller.visualize_results()
 
